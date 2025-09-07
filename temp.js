@@ -1,54 +1,16 @@
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+curl -X GET http://localhost:3000/api/health
 
-const authMiddleware = async (req, res, next) => {
-  try {
-    // Get token from cookie
-    const token = req.cookies.authToken;
 
-    if (!token) {
-      return res.status(401).json({
-        success: false,
-        message: 'Access denied. No token provided.'
-      });
-    }
+curl -X POST http://localhost:3000/api/auth/signup \
+  -H "Content-Type: application/json" \
+  -d '{"name": "John Doe", "email": "john@example.com", "password": "password123"}' \
+  -c cookies.txt
 
-    // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
-    // Check if user still exists
-    const user = await User.findById(decoded.userId);
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: 'User no longer exists'
-      });
-    }
 
-    // Add user ID to request
-    req.userId = decoded.userId;
-    next();
-  } catch (error) {
-    if (error.name === 'JsonWebTokenError') {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid token'
-      });
-    }
-    
-    if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({
-        success: false,
-        message: 'Token expired'
-      });
-    }
 
-    console.error('Auth middleware error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
-  }
-};
+  curl -X POST http://localhost:3000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "john@example.com", "password": "password123"}' \
+  -c cookies.txt
 
-module.exports = authMiddleware;
+  curl -X GET http://localhost:3000/api/auth/profile -b cookies.txt
