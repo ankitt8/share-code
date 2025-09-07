@@ -1,20 +1,37 @@
-const User = require('../models/User');
-const jwt = require('jsonwebtoken');
+exports.signup = async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
 
-// Generate JWT token
-const generateToken = (userId) => {
-  return jwt.sign({ userId }, process.env.JWT_SECRET, {
-    expiresIn: '7d'
-  });
-};
+    // Validation
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide name, email, and password'
+      });
+    }
 
-// Set cookie with JWT
-const setTokenCookie = (res, token) => {
-  const cookieOptions = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-  };
-  res.cookie('authToken', token, cookieOptions);
+    // Check if user exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'User already exists'
+      });
+    }
+
+    // Create user & generate token
+    const user = new User({ name, email, password });
+    await user.save();
+    
+    const token = generateToken(user._id);
+    setTokenCookie(res, token);
+
+    res.status(201).json({
+      success: true,
+      message: 'User created successfully',
+      user: { id: user._id, name: user.name, email: user.email }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
 };
